@@ -4,91 +4,37 @@ using System.Reflection.Metadata.Ecma335;
 using BattleIA;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
-
-namespace SampleBot {
-
-     static int minDistance(int[] distance, bool[] test, int scanMap)
-    {
-        int min = int.MaxValue;
-        int minIndex = 0;
-
-        for (int v = 0; v < scanMap; ++v)
-        {
-            if (test[v] == false && distance[v] <= min)
-            {
-                min = distance[v];
-                minIndex = v;
-            }
-        }
-
-        return minIndex;
-    }
-
-    private static void Print (int[] distance, int verticesCount)
-    {
-        Console.WriteLine("Vertex    Distance from source");
-
-        for (int i = 0; i < verticesCount; ++i)
-            Console.WriteLine("{0}\t  {1}", i, distance[i]);
-    }
-
-    public static void Dijkstra(int[,] graph, int source, int verticesCount)
-    {
-        int[] distance = new int[verticesCount];
-        bool[] shortestPathTreeSet = new bool[verticesCount];
-
-        for (int i = 0; i < verticesCount; ++i)
-        {
-            distance[i] = int.MaxValue;
-            shortestPathTreeSet[i] = false;
-        }
-
-        distance[source] = 0;
-
-        for (int count = 0; count < verticesCount - 1; ++count)
-        {
-            int u = minDistance(distance, shortestPathTreeSet, verticesCount);
-            shortestPathTreeSet[u] = true;
-
-            for (int v = 0; v < verticesCount; ++v)
-                if (!shortestPathTreeSet[v] && Convert.ToBoolean(graph[u, v]) && distance[u] != int.MaxValue && distance[u] + graph[u, v] < distance[v])
-                    distance[v] = distance[u] + graph[u, v];
-        }
-
-        Console.WriteLine(distance, verticesCount);
-    }
-
-
+namespace SampleBot
+{
     class NRJPOINT
     {
         public int posx;
         public int posy;
-        public int distance;
+        public int distance; 
 
         public int get_distance(int x, int y)
         {
             distance = Math.Abs(x - posx) + Math.Abs(y - posy);
             return distance;
         }
+
     }
 
     public class MyIA
     {
 
         Random rnd = new Random();
+
         bool isFirst = true;
+
         UInt16 currentShieldLevel = 0;
         bool hasBeenHit = false;
-        //my relative position in current scan.
-        int meY = 0;
-        int meX = 0;
 
         List<MoveDirection> route = new List<MoveDirection>();
 
-
         public MyIA()
-
         {
             // setup
         }
@@ -122,65 +68,9 @@ namespace SampleBot {
                 isFirst = false;
                 return 10;
             }
-            if (route.Count == 0)
-            {
-                return 10;
-            }
             return 0;
         }
 
-        List<MoveDirection> find_nearest_energy(List<NRJPOINT> pliste)
-        {
-            // Let's compute distance & find the nearest Energy point 
-            // pour chaque nrjtpoint appelé 'p' de nrj_list : 
-            // distance = valeur absolue (meX - nrjpoint.posx)+ abs(meY-nrjpoint.posy)
-            NRJPOINT target = new NRJPOINT();
-            target.distance = 9999;
-            foreach (NRJPOINT p in pliste)
-            {
-                p.get_distance(meX, meY);
-                if (p.distance < target.distance)
-                {
-                    target = p;
-                    target.posx = target.posx - meX;
-                    target.posy = target.posy - meY;
-
-                }
-            }
-
-            // lET'S generate a route : 
-            // Est / west  : 
-            if (target.posx < 0)
-            {
-                for (int i = 0; i < Math.Abs(target.posx); i++)
-                {
-                    route.Add(MoveDirection.East);
-                }
-            }
-            if (target.posx > 0)
-            {
-                for (int i = 0; i < Math.Abs(target.posx); i++)
-                {
-                    route.Add(MoveDirection.West);
-                }
-            }
-            if (target.posy < 0)
-            {
-                for (int i = 0; i < Math.Abs(target.posy); i++)
-                {
-                    route.Add(MoveDirection.North);
-                }
-            }
-            if (target.posy > 0)
-            {
-                for (int i = 0; i < Math.Abs(target.posy); i++)
-                {
-                    route.Add(MoveDirection.South);
-                }
-            }
-
-            return route;
-        }
 
 
 
@@ -191,10 +81,11 @@ namespace SampleBot {
         /// <param name="informations">Informations.</param>
         public void AreaInformation(byte distance, byte[] informations)
         {
-            if (distance == 0) { return; }
+            if(distance == 0) { return; }
 
             int radar_nrj = 0;
-
+            int meY = 0;
+            int meX = 0;
             List<NRJPOINT> NRJ_list = new List<NRJPOINT>();
 
             Console.WriteLine($"Area: {distance}");
@@ -203,39 +94,91 @@ namespace SampleBot {
             {
                 for (int j = 0; j < distance; j++)
                 {
-                    if (informations[index] == (byte)CaseState.Energy)
-                    {
+                    if (informations[index] == (byte)CaseState.Energy) 
+                    { 
                         radar_nrj++;
+
                         NRJPOINT n = new NRJPOINT();
                         n.posx = j;
                         n.posy = i;
-                        NRJ_list.Add(n);
+                        NRJ_list.Add(n); 
                     }
                     if (informations[index] == (byte)CaseState.Ennemy)
                     {
                         meX = j;
                         meY = i;
                     }
-                    index++;
-                    //Console.Write(informations[index]);
+                    Console.Write(informations[index++]);
                 }
-                //Console.WriteLine();
+                Console.WriteLine();
             }
-            route = find_nearest_energy(NRJ_list);
+            //pour chaque NRJ point de NRJ list calculer distance 
+            //distance = valeurs absole(meX - nrjpoint.posX) + abs(meY-nrjpoint.posy)
+            NRJPOINT target = new NRJPOINT();
+            target.distance = 9999; 
+            foreach (NRJPOINT p in NRJ_list)
+            {
+                p.get_distance(meX,meY); 
+                if(p.distance < target.distance)
+                {
+                    target = p;
+                    target.posx = target.posx - meX;
+                    target.posy = target.posy - meY; 
+                }
+                Console.WriteLine($"{p.posx} {p.posy} = {p.distance}");
+                Console.WriteLine($"targetv = { target.posx} {target.posy} = {target.distance}"); 
+            }
 
+            if (target.posx < 0)
+            {
+                for (int i = 0; i < Math.Abs(target.posx); i++){
+                    route.Add(MoveDirection.East); 
+                }
+            }
+            if (target.posx > 0)
+            {
+                for (int i = 0; i < Math.Abs(target.posx); i++)
+                {
+                    route.Add(MoveDirection.West);
+                }
+            }
+            if (target.posy > 0)
+            {
+                for (int i = 0; i < Math.Abs(target.posx); i++)
+                {
+                    route.Add(MoveDirection.South);
+                }
+            }
+            if(target.posy < 0)
+            {
+                for (int i = 0; i < Math.Abs(target.posx); i++)
+                {
+                    route.Add(MoveDirection.North);
+                }
+            }
+
+            Console.WriteLine("ROUTE = ");
+
+            foreach(MoveDirection d in route)
+            {
+                Console.WriteLine(d); 
+            }
+            //Console.WriteLine($"NRJ : {radar_nrj}");
+            //Console.WriteLine($"Me x : {meX}");
+            //Console.WriteLine($"Me y : {meY}");
         }
 
         //début modif
         public byte[] randommove()
         {
-            byte[] ret; // ret = tab d'octet
+            byte[] ret; // ret = tab d'octet 
             ret = new byte[2]; //tableau de taille 2 octet
             ret[0] = (byte)BotAction.Move;
             ret[1] = (byte)rnd.Next(1, 5);
 
-            return ret;
+            return ret; 
         }
-        //fin modif
+        //fin modif 
 
         /// <summary>
         /// On dot effectuer une action
@@ -279,6 +222,7 @@ namespace SampleBot {
                 return ret;
             }
 
+            // on se déplace au hazard
             ret = new byte[2];
             ret[0] = (byte)BotAction.Move;
             if (route.Count > 0)
@@ -288,8 +232,7 @@ namespace SampleBot {
             }
             else
             {
-                // on se déplace au hazard
-                ret[1] = (byte)rnd.Next(1, 5);
+               ret[1] = (byte)rnd.Next(1, 5);
             }
 
             //var ret = new byte[1];
